@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>DriveLog</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Karla:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F6F1E7;
+    --surface: #FFFFFF;
+    --surface-soft: #EFE8D9;
+    --line: #E8E0CE;
+    --text: #2B2620;
+    --muted: #8A7F6E;
+    --muted-light: #A79C8A;
+    --drive: #B5652E;
+    --drive-soft: #F3E2D3;
+    --travel: #5B8A72;
+    --travel-soft: #DEEAE3;
+    --walk: #5E7FA3;
+    --walk-soft: #DEE6EF;
+    --danger: #B24444;
+    --shadow: 0 1px 4px rgba(60,50,30,0.07);
+    --shadow-lg: 0 4px 16px rgba(60,50,30,0.14);
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'Karla', sans-serif;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    overflow: hidden;
+  }
+
+  #app {
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    max-width: 480px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    padding: 22px 22px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .logo {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    color: var(--text);
+  }
+
+  .logo span { color: var(--drive); }
+
+  .tab-bar {
+    display: flex;
+    gap: 3px;
+    background: var(--surface-soft);
+    border-radius: 12px;
+    padding: 3px;
+  }
+
+  .tab {
+    padding: 6px 14px;
+    border-radius: 9px;
+    font-size: 11.5px;
+    font-family: var(--font-body);
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    transition: all 0.2s;
+  }
+
+  .tab.active {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow);
+  }
+
+  /* ── VIEWS ── */
+  .view { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+  .view.active { display: flex; }
+
+  /* ── TRACK VIEW ── */
+  .track-view {
+    align-items: center;
+    padding: 8px 22px 22px;
+    gap: 16px;
+    overflow-y: auto;
+  }
+
+  /* Type selector */
+  .type-select {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .type-pill {
+    flex: 1;
+    padding: 12px 8px;
+    border-radius: 14px;
+    border: none;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    color: var(--muted);
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s;
+  }
+
+  .type-pill .type-icon { font-size: 17px; }
+
+  .type-pill.selected[data-type="drive"] { background: var(--drive-soft); color: var(--drive); }
+  .type-pill.selected[data-type="travel"] { background: var(--travel-soft); color: var(--travel); }
+  .type-pill.selected[data-type="walk"] { background: var(--walk-soft); color: var(--walk); }
+
+  /* Name input */
+  .name-input {
+    width: 100%;
+    padding: 13px 16px;
+    border-radius: 14px;
+    border: none;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    outline: none;
+  }
+
+  .name-input::placeholder { color: var(--muted-light); font-weight: 500; }
+
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    padding: 6px 14px;
+    background: var(--surface);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--muted-light);
+    transition: background 0.3s;
+  }
+
+  .status-dot.active { animation: pulse 1.5s infinite; }
+  .status-dot.active[data-type="drive"] { background: var(--drive); }
+  .status-dot.active[data-type="travel"] { background: var(--travel); }
+  .status-dot.active[data-type="walk"] { background: var(--walk); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+
+  /* Big timer */
+  .timer-block { text-align: center; width: 100%; }
+
+  .timer-label {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .timer-display {
+    font-family: var(--font-display);
+    font-size: 56px;
+    font-weight: 700;
+    letter-spacing: -1.5px;
+    line-height: 1;
+    color: var(--text);
+  }
+
+  /* Stats row */
+  .stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    border-radius: 16px;
+    padding: 14px 16px;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted-light);
+    margin-bottom: 3px;
+  }
+
+  .stat-value {
+    font-family: var(--font-display);
+    font-size: 21px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+
+  .stat-unit { font-family: var(--font-body); font-size: 12px; color: var(--muted-light); margin-left: 2px; }
+
+  /* Location card */
+  .location-card {
+    width: 100%;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    border-radius: 16px;
+    padding: 14px 16px;
+  }
+
+  .location-row { display: flex; align-items: flex-start; gap: 10px; padding: 4px 0; }
+
+  .location-dot { width: 7px; height: 7px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .location-dot.start { background: var(--drive); }
+  .location-dot.current { background: var(--travel); }
+
+  .location-line { width: 1px; height: 14px; background: var(--line); margin-left: 3px; }
+
+  .location-info { flex: 1; }
+  .location-name { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted-light); }
+  .location-coords { font-family: var(--font-display); font-size: 13px; color: var(--text); margin-top: 1px; word-break: break-all; }
+
+  /* Note field */
+  .note-input {
+    width: 100%;
+    padding: 13px 16px;
+    border-radius: 14px;
+    border: none;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    outline: none;
+    resize: none;
+  }
+
+  .note-input::placeholder { color: var(--muted-light); }
+
+  /* Start / Stop button */
+  .btn-main {
+    width: 100%;
+    padding: 18px;
+    border-radius: 18px;
+    border: none;
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    transition: all 0.18s;
+    color: #FBF5EA;
+  }
+
+  .btn-main:active { transform: scale(0.98); }
+
+  .btn-main.start[data-type="drive"] { background: var(--drive); box-shadow: 0 4px 14px rgba(181,101,46,0.3); }
+  .btn-main.start[data-type="travel"] { background: var(--travel); box-shadow: 0 4px 14px rgba(91,138,114,0.3); }
+  .btn-main.start[data-type="walk"] { background: var(--walk); box-shadow: 0 4px 14px rgba(94,127,163,0.3); }
+
+  .btn-main.stop {
+    background: var(--surface);
+    color: var(--danger);
+    box-shadow: var(--shadow);
+    border: 1.5px solid var(--danger);
+  }
+
+  /* ── HISTORY VIEW ── */
+  .history-view { flex-direction: column; overflow: hidden; }
+
+  .history-header {
+    padding: 8px 22px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .history-title { font-family: var(--font-display); font-size: 19px; font-weight: 700; }
+
+  .history-count { font-size: 11px; color: var(--muted); }
+
+  .history-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 22px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 10px;
+    color: var(--muted);
+  }
+
+  .empty-icon { font-size: 36px; opacity: 0.5; }
+  .empty-text { font-family: var(--font-display); font-size: 15px; font-weight: 600; }
+
+  .trip-card {
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    border-radius: 18px;
+    padding: 16px 18px;
+    position: relative;
+  }
+
+  .trip-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+    gap: 10px;
+  }
+
+  .trip-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 10px;
+    margin-bottom: 5px;
+  }
+
+  .trip-type-badge[data-type="drive"] { background: var(--drive-soft); color: var(--drive); }
+  .trip-type-badge[data-type="travel"] { background: var(--travel-soft); color: var(--travel); }
+  .trip-type-badge[data-type="walk"] { background: var(--walk-soft); color: var(--walk); }
+
+  .trip-name { font-family: var(--font-display); font-size: 15.5px; font-weight: 600; color: var(--text); }
+  .trip-date { font-size: 11px; color: var(--muted-light); margin-top: 2px; }
+
+  .trip-duration { font-family: var(--font-display); font-size: 19px; font-weight: 700; color: var(--text); flex-shrink: 0; white-space: nowrap; }
+
+  .trip-stats { display: flex; gap: 18px; flex-wrap: wrap; }
+
+  .trip-stat-label { font-size: 9.5px; color: var(--muted-light); letter-spacing: 0.5px; text-transform: uppercase; }
+  .trip-stat-val { font-size: 13px; color: var(--text); margin-top: 2px; }
+
+  .trip-note {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  .trip-delete {
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    background: none;
+    border: none;
+    color: var(--muted-light);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 4px;
+  }
+  .trip-delete:active { color: var(--danger); }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--text);
+    color: var(--bg);
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-family: var(--font-body);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 100;
+    white-space: nowrap;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="logo">Drive<span>Log</span></div>
+    <div class="tab-bar">
+      <button class="tab active" onclick="switchTab('track')">Track</button>
+      <button class="tab" onclick="switchTab('history')">History</button>
+    </div>
+  </div>
+
+  <!-- TRACK VIEW -->
+  <div class="view track-view active" id="view-track">
+
+    <div class="type-select" id="type-select">
+      <button class="type-pill selected" data-type="drive" onclick="selectType('drive')">
+        <span class="type-icon">🚗</span>Drive
+      </button>
+      <button class="type-pill" data-type="travel" onclick="selectType('travel')">
+        <span class="type-icon">🧭</span>Travel
+      </button>
+      <button class="type-pill" data-type="walk" onclick="selectType('walk')">
+        <span class="type-icon">🚶</span>Walk
+      </button>
+    </div>
+
+    <input type="text" class="name-input" id="trip-name-input" placeholder="Name this trip (optional)">
+
+    <div class="status-badge">
+      <div class="status-dot" id="status-dot" data-type="drive"></div>
+      <span id="status-text">Ready</span>
+    </div>
+
+    <div class="timer-block">
+      <div class="timer-label">Duration</div>
+      <div class="timer-display" id="timer">00:00</div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Distance</div>
+        <div class="stat-value" id="distance">0.0<span class="stat-unit">km</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Start time</div>
+        <div class="stat-value" id="start-time-stat" style="font-size:17px;">—</div>
+      </div>
+    </div>
+
+    <div class="location-card">
+      <div class="location-row">
+        <div class="location-dot start"></div>
+        <div class="location-info">
+          <div class="location-name">Start</div>
+          <div class="location-coords" id="start-coords">—</div>
+        </div>
+      </div>
+      <div class="location-line" style="margin-left:18px;"></div>
+      <div class="location-row">
+        <div class="location-dot current"></div>
+        <div class="location-info">
+          <div class="location-name">Current</div>
+          <div class="location-coords" id="current-coords">—</div>
+        </div>
+      </div>
+    </div>
+
+    <textarea class="note-input" id="note-input" rows="2" placeholder="Add a note (optional)…"></textarea>
+
+    <button class="btn-main start" id="main-btn" data-type="drive" onclick="toggleDrive()">Start drive</button>
+  </div>
+
+  <!-- HISTORY VIEW -->
+  <div class="view history-view" id="view-history">
+    <div class="history-header">
+      <div class="history-title">Trips</div>
+      <div class="history-count" id="trip-count">0 trips</div>
+    </div>
+    <div class="history-list" id="history-list"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ──
+let isTracking = false;
+let watchId = null;
+let startTime = null;
+let timerInterval = null;
+let routePoints = [];
+let totalDistance = 0;
+let startCoords = null;
+let currentCoords = null;
+let trips = [];
+let selectedType = 'drive';
+
+const TYPE_LABELS = { drive: 'Drive', travel: 'Travel', walk: 'Walk' };
+const TYPE_ICONS = { drive: '🚗', travel: '🧭', walk: '🚶' };
+
+// ── STORAGE ──
+const STORAGE_KEY = 'drivelog_trips_v2';
+
+function loadTrips() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) trips = JSON.parse(raw);
+  } catch(e) { trips = []; }
+}
+
+function saveTrips() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(trips));
+  } catch(e) { showToast('Storage full — older trips may not be saved.'); }
+}
+
+// ── TABS ──
+function switchTab(tab) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('view-' + tab).classList.add('active');
+  event.target.classList.add('active');
+  if (tab === 'history') renderHistory();
+}
+
+// ── TYPE SELECT ──
+function selectType(type) {
+  if (isTracking) return;
+  selectedType = type;
+  document.querySelectorAll('.type-pill').forEach(p => {
+    p.classList.toggle('selected', p.dataset.type === type);
+  });
+  document.getElementById('status-dot').dataset.type = type;
+  document.getElementById('main-btn').dataset.type = type;
+  document.getElementById('main-btn').textContent = 'Start ' + TYPE_LABELS[type].toLowerCase();
+}
+
+// ── DRIVE CONTROL ──
+function toggleDrive() {
+  if (!isTracking) startDrive();
+  else stopDrive();
+}
+
+function startDrive() {
+  if (!navigator.geolocation) {
+    showToast('GPS not available on this device.');
+    return;
+  }
+
+  isTracking = true;
+  startTime = Date.now();
+  routePoints = [];
+  totalDistance = 0;
+  startCoords = null;
+  currentCoords = null;
+
+  document.getElementById('status-dot').classList.add('active');
+  document.getElementById('status-text').textContent = 'Tracking';
+  document.getElementById('main-btn').textContent = 'Stop ' + TYPE_LABELS[selectedType].toLowerCase();
+  document.getElementById('main-btn').className = 'btn-main stop';
+  document.getElementById('distance').innerHTML = '0.0<span class="stat-unit">km</span>';
+  document.getElementById('start-time-stat').textContent = formatTime(startTime);
+  document.getElementById('start-coords').textContent = 'Acquiring GPS…';
+  document.getElementById('current-coords').textContent = 'Acquiring GPS…';
+  document.querySelectorAll('.type-pill').forEach(p => p.style.opacity = '0.5');
+
+  timerInterval = setInterval(updateTimer, 1000);
+
+  watchId = navigator.geolocation.watchPosition(
+    onPosition,
+    onGpsError,
+    { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+  );
+}
+
+function stopDrive() {
+  isTracking = false;
+  clearInterval(timerInterval);
+  if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+
+  const duration = Math.floor((Date.now() - startTime) / 1000);
+  const note = document.getElementById('note-input').value.trim();
+  const name = document.getElementById('trip-name-input').value.trim();
+
+  const trip = {
+    id: Date.now(),
+    type: selectedType,
+    name: name || null,
+    date: new Date(startTime).toISOString(),
+    duration,
+    distance: Math.round(totalDistance * 100) / 100,
+    startCoords: startCoords ? { lat: startCoords.latitude, lng: startCoords.longitude } : null,
+    endCoords: currentCoords ? { lat: currentCoords.latitude, lng: currentCoords.longitude } : null,
+    note: note || null,
+  };
+
+  trips.unshift(trip);
+  saveTrips();
+
+  document.getElementById('status-dot').classList.remove('active');
+  document.getElementById('status-text').textContent = 'Ready';
+  document.getElementById('timer').textContent = '00:00';
+  document.getElementById('main-btn').textContent = 'Start ' + TYPE_LABELS[selectedType].toLowerCase();
+  document.getElementById('main-btn').className = 'btn-main start';
+  document.getElementById('main-btn').dataset.type = selectedType;
+  document.getElementById('note-input').value = '';
+  document.getElementById('trip-name-input').value = '';
+  document.getElementById('start-coords').textContent = '—';
+  document.getElementById('current-coords').textContent = '—';
+  document.getElementById('start-time-stat').textContent = '—';
+  document.getElementById('distance').innerHTML = '0.0<span class="stat-unit">km</span>';
+  document.querySelectorAll('.type-pill').forEach(p => p.style.opacity = '1');
+
+  showToast(`Trip saved — ${formatDuration(duration)}, ${trip.distance} km`);
+}
+
+function onPosition(pos) {
+  const { latitude, longitude } = pos.coords;
+
+  if (!startCoords) {
+    startCoords = pos.coords;
+    document.getElementById('start-coords').textContent = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+  }
+
+  if (currentCoords) {
+    const d = haversine(currentCoords.latitude, currentCoords.longitude, latitude, longitude);
+    if (d > 0.005) {
+      totalDistance += d;
+      routePoints.push({ lat: latitude, lng: longitude, t: Date.now() });
+    }
+  } else {
+    routePoints.push({ lat: latitude, lng: longitude, t: Date.now() });
+  }
+
+  currentCoords = pos.coords;
+  document.getElementById('current-coords').textContent = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+  document.getElementById('distance').innerHTML = `${totalDistance.toFixed(2)}<span class="stat-unit">km</span>`;
+}
+
+function onGpsError(err) {
+  showToast('GPS error: ' + err.message);
+}
+
+// ── TIMER ──
+function updateTimer() {
+  const elapsed = Math.floor((Date.now() - startTime) / 1000);
+  document.getElementById('timer').textContent = formatDuration(elapsed);
+}
+
+function formatDuration(secs) {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  if (h > 0) return `${pad(h)}:${pad(m)}:${pad(s)}`;
+  return `${pad(m)}:${pad(s)}`;
+}
+
+function formatTime(ms) {
+  return new Date(ms).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
+}
+
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ── HISTORY ──
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  document.getElementById('trip-count').textContent = `${trips.length} trip${trips.length !== 1 ? 's' : ''}`;
+
+  if (trips.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">🗺️</div><div class="empty-text">No trips yet</div></div>`;
+    return;
+  }
+
+  list.innerHTML = trips.map((t, i) => {
+    const d = new Date(t.date);
+    const dateStr = d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+    const timeStr = d.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
+    const type = t.type || 'drive';
+    return `
+      <div class="trip-card">
+        <div class="trip-top">
+          <div>
+            <div class="trip-type-badge" data-type="${type}">${TYPE_ICONS[type]} ${TYPE_LABELS[type]}</div>
+            <div class="trip-name">${t.name || dateStr}</div>
+            <div class="trip-date">${dateStr} · ${timeStr}</div>
+          </div>
+          <div class="trip-duration">${formatDuration(t.duration)}</div>
+        </div>
+        <div class="trip-stats">
+          <div class="trip-stat">
+            <div class="trip-stat-label">Distance</div>
+            <div class="trip-stat-val">${t.distance} km</div>
+          </div>
+          ${t.startCoords ? `<div class="trip-stat">
+            <div class="trip-stat-label">Start point</div>
+            <div class="trip-stat-val">${t.startCoords.lat.toFixed(4)}, ${t.startCoords.lng.toFixed(4)}</div>
+          </div>` : ''}
+        </div>
+        ${t.note ? `<div class="trip-note">"${t.note}"</div>` : ''}
+        <button class="trip-delete" onclick="deleteTrip(${i}, event)" title="Delete">✕</button>
+      </div>
+    `;
+  }).join('');
+}
+
+function deleteTrip(index, e) {
+  e.stopPropagation();
+  if (confirm('Delete this trip?')) {
+    trips.splice(index, 1);
+    saveTrips();
+    renderHistory();
+  }
+}
+
+// ── TOAST ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── INIT ──
+loadTrips();
+</script>
+</body>
+</html>
